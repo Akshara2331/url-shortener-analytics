@@ -55,6 +55,9 @@ Two normalized tables separate link storage from click events to keep redirects 
   "url": "[https://github.com](https://github.com)"
 }
 ```
+
+
+## Project Structure
 ```
 url-shortener-analytics/
 ├── .github/workflows/
