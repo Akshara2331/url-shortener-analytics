@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>URL Shortener & Analytics</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; color: #1f2937; }
+    h1 { margin-bottom: 4px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px; margin-top: 20px; }
+    .row { display: flex; gap: 8px; }
+    input { flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+    button { padding: 10px 16px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+    button:hover { background: #1d4ed8; }
+    .result { margin-top: 14px; padding: 12px; background: #f3f4f6; border-radius: 6px; display: none; }
+    .error { color: #dc2626; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #e5e7eb; }
+  </style>
+</head>
+<body>
+  <h1>URL Shortener</h1>
+  <p>Shorten links and track click analytics in real time.</p>
+
+  <div class="card">
+    <h2>Shorten a URL</h2>
+    <div class="row">
+      <input id="urlInput" type="url" placeholder="https://example.com/very/long/url" />
+      <button onclick="shortenUrl()">Shorten</button>
+    </div>
+    <div id="shortenError" class="error"></div>
+    <div id="shortenResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>Check Click Analytics</h2>
+    <div class="row">
+      <input id="codeInput" type="text" placeholder="Enter short code (e.g. 1)" />
+      <button onclick="fetchAnalytics()">View Stats</button>
+    </div>
+    <div id="analyticsError" class="error"></div>
+    <div id="analyticsResult" class="result"></div>
+  </div>
+
+  <script>
+    async function shortenUrl() {
+      const url = document.getElementById("urlInput").value.trim();
+      const errEl = document.getElementById("shortenError");
+      const resEl = document.getElementById("shortenResult");
+      errEl.textContent = "";
+      resEl.style.display = "none";
+
+      const res = await fetch("/api/shorten", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        errEl.textContent = data.detail || "Failed to shorten URL.";
+        return;
+      }
+
+      resEl.innerHTML = `
+        <strong>Short URL:</strong>
+        <a href="${data.short_url}" target="_blank">${data.short_url}</a>
+        <button style="margin-left:8px;padding:4px 10px;" onclick="navigator.clipboard.writeText('${data.short_url}')">Copy</button>
+        <div><small>Code: <code>${data.short_code}</code></small></div>
+      `;
+      resEl.style.display = "block";
+      document.getElementById("codeInput").value = data.short_code;
+    }
+
+    async function fetchAnalytics() {
+      const code = document.getElementById("codeInput").value.trim();
+      const errEl = document.getElementById("analyticsError");
+      const resEl = document.getElementById("analyticsResult");
+      errEl.textContent = "";
+      resEl.style.display = "none";
+
+      const res = await fetch(`/api/analytics/${encodeURIComponent(code)}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        errEl.textContent = data.detail || "Analytics not found.";
+        return;
+      }
+
+      const dayRows = data.clicks_by_day.length
+        ? data.clicks_by_day.map(d => `<tr><td>${d.day}</td><td>${d.clicks}</td></tr>`).join("")
+        : `<tr><td colspan="2">No clicks recorded yet.</td></tr>`;
+
+      resEl.innerHTML = `
+        <p><strong>Original URL:</strong> ${data.original_url}</p>
+        <p><strong>Total Clicks:</strong> ${data.total_clicks}</p>
+        <table>
+          <thead><tr><th>Date</th><th>Clicks</th></tr></thead>
+          <tbody>${dayRows}</tbody>
+        </table>
+      `;
+      resEl.style.display = "block";
+    }
+  </script>
+</body>
+</html>
