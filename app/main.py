@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 
 from app.database import get_connection, init_db
@@ -99,6 +99,9 @@ def get_analytics(short_code: str):
         "top_referrers": [dict(row) for row in top_referrers],
     }
 
+@app.get("/")
+def serve_home():
+    return FileResponse("static/index.html")
 
 @app.get("/{short_code}")
 def redirect_to_url(short_code: str, request: Request):
